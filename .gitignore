@@ -7,6 +7,8 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
 
-.env
+# Environment-specific files
+.env.*  # 忽略所有以 .env. 开头的文件，如 .env.dev, .env.prod
+!.env.sample # 但不要忽略 .env.sample 文件
