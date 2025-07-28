@@ -1,11 +1,12 @@
 # /fastapi-demo-project/app/core/config.py
-
+import os
 from functools import lru_cache
 from typing import Literal
 
 # 使用 Python 3.8+ 内置的 importlib.metadata
 from importlib import metadata
 
+from loguru import logger
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -33,7 +34,13 @@ class DatabaseSettings(BaseSettings):
     PORT: int = 5432
     USER: str = "postgres"
     PASSWORD: str = "postgres"
-    DB: str = "app"
+    DB: str = "tutorial"
+
+    POOL_SIZE: int = 20
+    MAX_OVERFLOW: int = 10
+    POOL_TIMEOUT: int = 30
+    POOL_RECYCLE: int = 3600
+    ECHO: bool = False
 
     # 使用 @computed_field，可以在模型内部根据其他字段动态生成新字段
     # 这比在模型外部手动拼接字符串要优雅得多。
@@ -86,13 +93,7 @@ def get_settings() -> Settings:
 
     这意味着，如果你在应用运行时更改了 .env 文件，你需要重启应用才能使更改生效。
     """
-    print("正在加载配置...")  # 这条消息只会在应用首次启动时打印一次
-
-    # 根据 ENVIRONMENT 环境变量来决定加载哪个 .env 文件
-    # 这是一个非常灵活的模式
-    import os
-
-    print("正在加载配置...")  # 这条消息只会在应用首次启动时打印一次
+    logger.info("正在加载配置...")  # 这条消息只会在应用首次启动时打印一次
 
     # 根据 ENVIRONMENT 环境变量来决定加载哪个 .env 文件
     # 这是一个非常灵活的模式
@@ -104,7 +105,7 @@ def get_settings() -> Settings:
 
     settings = Settings(_env_file=env_file)  # type: ignore
 
-    print(f"成功加载 '{env}' 环境配置 for {settings.APP_NAME}")
+    logger.info(f"成功加载 '{env}' 环境配置 for {settings.APP_NAME}")
     return settings
 
 
