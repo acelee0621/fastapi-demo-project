@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     AsyncEngine,
 )
-from sqlalchemy.orm import DeclarativeBase
 from loguru import logger
 from app.core.config import settings
+from app.models.base import Base
 
 
 # --- 1. 全局变量定义 ---
@@ -25,11 +25,6 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     if _SessionFactory is None:
         raise RuntimeError("会话工厂未初始化. 请先调用 setup_database_connection")
     return _SessionFactory
-
-
-# --- 基类 ---
-class Base(DeclarativeBase):
-    pass
 
 
 # --- 2. 通用的数据库初始化和关闭函数 ---
@@ -82,9 +77,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     if _SessionFactory is None:
         # 这个错误通常不应该在正确配置的生产环境中出现
         # 它表明 setup_database_connection 未在应用启动时调用
-        raise Exception(
-            "数据库未初始化。请检查 FastAPI 的 lifespan 启动配置。"
-        )
+        raise Exception("数据库未初始化。请检查 FastAPI 的 lifespan 启动配置。")
 
     async with _SessionFactory() as session:
         yield session
@@ -96,3 +89,4 @@ async def create_db_and_tables():
         raise Exception("无法创建表，因为数据库引擎未初始化。")
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        logger.info("数据库表创建成功。")
