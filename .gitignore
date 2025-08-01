@@ -10,5 +10,6 @@ wheels/
 .venv/
 
 # Environment-specific files
-.env.*  # 忽略所有以 .env. 开头的文件，如 .env.dev, .env.prod
+# 忽略所有目录下的 .env.* 文件
+**/.env.*
 !.env.sample # 但不要忽略 .env.sample 文件
