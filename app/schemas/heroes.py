@@ -20,10 +20,14 @@ class HeroUpdate(BaseModel):
 
 
 # 从数据库读取并返回给客户端的模型
-# 不应该包含密码，但应该包含 id
 class HeroResponse(HeroBase):
     id: int
 
     # Pydantic V2 的新配置方式
     class Config:
         from_attributes = True  # 告诉 Pydantic 模型可以从 ORM 对象属性中读取数据
+        
+        
+# 新增一个用于返回带故事的英雄信息的模型
+class HeroStoryResponse(HeroResponse):
+    story: str

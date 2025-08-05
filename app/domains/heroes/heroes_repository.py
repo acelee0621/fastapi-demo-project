@@ -1,3 +1,4 @@
+# app/domains/heroes/heroes_repository.py
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,7 +47,7 @@ class HeroRepository:
         if not hero:
             raise NotFoundException(f"Hero with id {hero_id} not found")
 
-        update_data = hero_data.model_dump(exclude_unset=True, exclude_none=True)
+        update_data = hero_data.model_dump(exclude_unset=True)
         if not update_data:
             raise ValueError("No fields to update")
         for key, value in update_data.items():

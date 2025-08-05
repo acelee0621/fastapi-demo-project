@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.repository.heroes import HeroRepository
-from app.service.heroes import HeroService
-from app.schemas.heroes import HeroCreate, HeroUpdate, HeroResponse
+from app.domains.heroes.heroes_repository import HeroRepository
+from app.domains.heroes.heroes_services import HeroService
+from app.schemas.heroes import HeroCreate, HeroUpdate, HeroResponse, HeroStoryResponse
 
 
 router = APIRouter(prefix="/heroes", tags=["Heroes"])
@@ -88,4 +88,19 @@ async def delete_hero(
         logger.info(f"Deleted hero {hero_id}")
     except Exception as e:
         logger.error(f"Failed to delete hero {hero_id}: {str(e)}")
+        raise
+    
+    
+@router.get("/{hero_id}/story", response_model=HeroStoryResponse)
+async def generate_hero_story(
+    hero_id: int,
+    service: HeroService = Depends(get_hero_service),
+) -> HeroResponse:
+    """Generate hero story."""
+    try:
+        story = await service.get_hero_with_story(hero_id=hero_id)
+        logger.info(f"Generated story for hero {hero_id}")
+        return story
+    except Exception as e:
+        logger.error(f"Failed to generate hero's story. {hero_id}: {str(e)}")
         raise
