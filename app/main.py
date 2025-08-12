@@ -11,7 +11,6 @@ from app.core.config import Settings, get_settings, get_project_version, setting
 from app.core.database import (
     setup_database_connection,
     close_database_connection,
-    create_db_and_tables,
     get_db,
 )
 
@@ -25,9 +24,6 @@ async def lifespan(app: FastAPI):
     # 应用启动时执行
     get_settings()
     await setup_database_connection()
-    # [可选] 在开发时创建表
-    if settings.ENVIRONMENT == "dev":
-        await create_db_and_tables()
 
     logger.info("🚀 应用启动，数据库已连接。")
     yield
