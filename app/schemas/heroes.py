@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class HeroBase(BaseModel):
     name: str
     alias: str
+    powers: str | None = None
 
 
 # 创建用户时，从请求体中读取的模型
@@ -17,6 +18,7 @@ class HeroCreate(HeroBase):
 class HeroUpdate(BaseModel):
     name: str | None = None
     alias: str | None = None
+    powers: str | None = None
 
 
 # 从数据库读取并返回给客户端的模型
