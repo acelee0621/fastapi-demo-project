@@ -43,11 +43,11 @@ async def create_hero(
 
 @router.get("", response_model=HeroListResponse)
 async def list_heroes(
-    search: str | None = Query(None, description="模糊搜索 name 或 alias"),
-    order_by: str = Query("id", description="排序字段：name | alias | id"),
-    direction: str = Query("asc", regex="^(asc|desc)$"),
-    page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    search: str | None = Query(None, description="按名称、别名、能力进行模糊搜索"),
+    order_by: str = Query("id", description="排序字段：name, alias, id"),
+    direction: str = Query("asc", description="排序方向", regex="^(asc|desc)$"),
+    page: int = Query(1, ge=1, description="页码"),
+    limit: int = Query(10, ge=1, le=100, description="每页数量"),
     service: HeroService = Depends(get_hero_service),
 ) -> HeroListResponse:
     try:
