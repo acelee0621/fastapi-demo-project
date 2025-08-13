@@ -1,4 +1,4 @@
-# fill_fake_heroes.py
+# /scripts/fill_fake_heroes.py
 import asyncio
 
 from app.models import Hero
