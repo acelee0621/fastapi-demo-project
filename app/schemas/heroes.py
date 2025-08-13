@@ -33,3 +33,34 @@ class HeroResponse(HeroBase):
 # 新增一个用于返回带故事的英雄信息的模型
 class HeroStoryResponse(HeroResponse):
     story: str
+
+
+# 新增用于「分页、排序、过滤/搜索」三合一查询的模型
+# 目前只有 Hero 在用这些模型，暂时写在这同一个文件里
+# 后续可以将分页、排序、过滤/搜索的逻辑抽离出来
+
+# 1.分页
+class Pagination(BaseModel):
+    currentPage: int
+    totalPages: int
+    totalItems: int
+    limit: int
+    hasMore: bool
+    previousPage: int | None
+    nextPage: int | None
+
+# 2.排序
+class Sort(BaseModel):
+    field: str
+    direction: str   # asc | desc
+
+# 3.过滤/搜索
+class Filters(BaseModel):
+    search: str | None
+
+# 4.包装返回结构
+class HeroListResponse(BaseModel):
+    data: list[HeroResponse]
+    pagination: Pagination
+    sort: Sort
+    filters: Filters

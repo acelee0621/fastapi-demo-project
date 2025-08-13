@@ -1,5 +1,5 @@
 # app/domains/heroes/heroes_repository.py
-from sqlalchemy import select
+from sqlalchemy import select, func, or_, desc, asc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,11 +35,40 @@ class HeroRepository:
             raise NotFoundException(f"Hero with id {hero_id} not found")
         return hero
 
-    async def get_all(self) -> list[Hero]:
-        """Fetch all heroes."""
+    async def get_all(
+        self,
+        *,
+        search: str | None = None,
+        order_by: str = "id",
+        direction: str = "asc",
+        limit: int = 10,
+        offset: int = 0,
+    ) -> tuple[int, list[Hero]]:
         query = select(Hero)
-        result = await self.session.scalars(query)
-        return list(result.all())
+
+        # 1. 搜索
+        if search:
+            query = query.where(
+                or_(
+                    Hero.name.ilike(f"%{search}%"),
+                    Hero.alias.ilike(f"%{search}%"),
+                )
+            )
+
+        # 2. 排序
+        col = getattr(Hero, order_by, Hero.id)
+        query = query.order_by(desc(col) if direction == "desc" else asc(col))
+
+        # 3. 总数
+        total = await self.session.scalar(
+            select(func.count()).select_from(query.subquery())
+        ) or 0
+
+        # 4. 分页
+        items = list(
+            await self.session.scalars(query.offset(offset).limit(limit))
+        )
+        return total, items
 
     async def update(self, hero_data: HeroUpdate, hero_id: int) -> Hero:
         """Update an existing hero."""

@@ -1,12 +1,21 @@
 # app/api/v1/heroes_route.py
 from loguru import logger
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.domains.heroes.heroes_repository import HeroRepository
 from app.domains.heroes.heroes_services import HeroService
-from app.schemas.heroes import HeroCreate, HeroUpdate, HeroResponse, HeroStoryResponse
+from app.schemas.heroes import (
+    HeroCreate,
+    HeroUpdate,
+    HeroResponse,
+    HeroStoryResponse,
+    HeroListResponse,
+    Pagination,
+    Sort,
+    Filters,
+)
 
 
 router = APIRouter(prefix="/heroes", tags=["Heroes"])
@@ -32,17 +41,42 @@ async def create_hero(
         raise
 
 
-@router.get("", response_model=list[HeroResponse])
-async def get_all_heroes(
+@router.get("", response_model=HeroListResponse)
+async def list_heroes(
+    search: str | None = Query(None, description="模糊搜索 name 或 alias"),
+    order_by: str = Query("id", description="排序字段：name | alias | id"),
+    direction: str = Query("asc", regex="^(asc|desc)$"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     service: HeroService = Depends(get_hero_service),
-) -> list[HeroResponse]:
-    """Get all heroes."""
+) -> HeroListResponse:
     try:
-        all_heroes = await service.get_heroes()
-        logger.info(f"Retrieved {len(all_heroes)} heroes")
-        return all_heroes
+        offset = (page - 1) * limit
+        total, heroes = await service.get_heroes(
+            search=search,
+            order_by=order_by,
+            direction=direction,
+            limit=limit,
+            offset=offset,
+        )
+        total_pages = (total + limit - 1) // limit
+
+        return HeroListResponse(
+            data=heroes,
+            pagination=Pagination(
+                currentPage=page,
+                totalPages=total_pages,
+                totalItems=total,
+                limit=limit,
+                hasMore=page < total_pages,
+                previousPage=page - 1 if page > 1 else None,
+                nextPage=page + 1 if page < total_pages else None,
+            ),
+            sort=Sort(field=order_by, direction=direction),
+            filters=Filters(search=search),
+        )
     except Exception as e:
-        logger.error(f"Failed to fetch all heroes: {str(e)}")
+        logger.error(f"Failed to fetch heroes: {e}")
         raise
 
 
@@ -89,8 +123,8 @@ async def delete_hero(
     except Exception as e:
         logger.error(f"Failed to delete hero {hero_id}: {str(e)}")
         raise
-    
-    
+
+
 @router.get("/{hero_id}/story", response_model=HeroStoryResponse)
 async def generate_hero_story(
     hero_id: int,

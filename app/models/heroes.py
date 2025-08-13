@@ -3,8 +3,9 @@ from sqlalchemy import String, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.mixin import DateTimeMixin
 
-class Hero(Base):
+class Hero(Base, DateTimeMixin):
     __tablename__ = "heroes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
