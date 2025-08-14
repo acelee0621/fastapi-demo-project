@@ -17,24 +17,43 @@ class HeroService:
         hero = await self.repository.get_by_id(hero_id)
         return HeroResponse.model_validate(hero)
 
+    # async def get_heroes(
+    #     self,
+    #     *,
+    #     search: str | None,
+    #     order_by: str,
+    #     direction: str,
+    #     limit: int,
+    #     offset: int,
+    # ) -> tuple[int, list[HeroResponse]]:
+    #     total, heroes_orm = await self.repository.get_all(
+    #         search=search,
+    #         order_by=order_by,
+    #         direction=direction,
+    #         limit=limit,
+    #         offset=offset,
+    #     )        
+    #     heroes_schema = [HeroResponse.model_validate(h) for h in heroes_orm]
+    #     return total, heroes_schema      # 👈 返回 tuple[int, list[HeroResponse]]
+    
+    
     async def get_heroes(
         self,
         *,
-        search: str | None,
-        order_by: str,
-        direction: str,
-        limit: int,
-        offset: int,
+        search: str | None = None,
+        order_by: list[str] | None = None,
+        limit: int = 10,
+        offset: int = 0,
     ) -> tuple[int, list[HeroResponse]]:
         total, heroes_orm = await self.repository.get_all(
             search=search,
-            order_by=order_by,
-            direction=direction,
+            order_by=order_by,            
             limit=limit,
             offset=offset,
-        )        
+        )
         heroes_schema = [HeroResponse.model_validate(h) for h in heroes_orm]
-        return total, heroes_schema      # 👈 返回 tuple[int, list[HeroResponse]]
+        return total, heroes_schema
+    
 
     async def update_hero(self, data: HeroUpdate, hero_id: int) -> HeroResponse:
         hero = await self.repository.update(data, hero_id)

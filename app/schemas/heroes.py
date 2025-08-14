@@ -1,6 +1,11 @@
 # app/schemas/heroes.py
 from pydantic import BaseModel
+from typing import Literal
 
+class OrderByRule(BaseModel):
+    field: str
+    dir: Literal["asc", "desc"] = "asc"    
+    
 
 # 基础模型，包含所有用户共有的字段
 class HeroBase(BaseModel):
@@ -50,9 +55,17 @@ class Pagination(BaseModel):
     nextPage: int | None
 
 # 2.排序
+# class Sort(BaseModel):
+#     field: str
+#     direction: str   # asc | desc
+
+
 class Sort(BaseModel):
-    field: str
-    direction: str   # asc | desc
+    fields: list[OrderByRule]
+    
+    
+    
+
 
 # 3.过滤/搜索
 class Filters(BaseModel):
