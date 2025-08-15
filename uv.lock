@@ -176,6 +176,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "fastapi", extra = ["standard"] },
+    { name = "fastapi-filter" },
     { name = "httptools" },
     { name = "loguru" },
     { name = "pydantic-settings" },
@@ -187,10 +188,24 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.16.4" },
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.116.1" },
+    { name = "fastapi-filter", specifier = ">=2.0.1" },
     { name = "httptools", specifier = ">=0.6.4" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "sqlalchemy", specifier = ">=2.0.41" },
+]
+
+[[package]]
+name = "fastapi-filter"
+version = "2.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/ed/c36cfcd849519fd2d23051ad81a91fc5e8cfa7109496fc8a10ad565a5fe9/fastapi_filter-2.0.1.tar.gz", hash = "sha256:cffda370097af7e404f1eb188aca58b199084bfaf7cec881e40b404adf12566e", size = 9857, upload-time = "2024-12-07T17:30:06.343Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/88/afc022ad64d12f730141fc50758ecf9d60de5fed11335dc16e3127617f05/fastapi_filter-2.0.1-py3-none-any.whl", hash = "sha256:711d48707ec62f7c9e12a7713fc0f6a99858a9e3741b4d108102d5599e77197d", size = 11586, upload-time = "2024-12-07T17:30:05.375Z" },
 ]
 
 [[package]]

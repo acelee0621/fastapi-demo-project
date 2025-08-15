@@ -1,6 +1,7 @@
 # app/domains/heroes/heroes_services.py
 from app.domains.heroes.heroes_repository import HeroRepository
 from app.schemas.heroes import HeroCreate, HeroUpdate, HeroResponse, HeroStoryResponse
+from app.schemas.heroes_filter import HeroFilter
 
 
 class HeroService:
@@ -16,12 +17,13 @@ class HeroService:
     async def get_hero(self, hero_id: int) -> HeroResponse:
         hero = await self.repository.get_by_id(hero_id)
         return HeroResponse.model_validate(hero)
-
+    
+    # 单字段排序
     # async def get_heroes(
     #     self,
     #     *,
     #     search: str | None,
-    #     order_by: str,
+    #     order_by: str,  #单字段排序参数定义
     #     direction: str,
     #     limit: int,
     #     offset: int,
@@ -37,22 +39,38 @@ class HeroService:
     #     return total, heroes_schema      # 👈 返回 tuple[int, list[HeroResponse]]
     
     
+    # 多字段排序
+    # async def get_heroes(
+    #     self,
+    #     *,
+    #     search: str | None = None,
+    #     order_by: list[str] | None = None,  # 多字段排序参数定义
+    #     limit: int = 10,
+    #     offset: int = 0,
+    # ) -> tuple[int, list[HeroResponse]]:
+    #     total, heroes_orm = await self.repository.get_all(
+    #         search=search,
+    #         order_by=order_by,            
+    #         limit=limit,
+    #         offset=offset,
+    #     )
+    #     heroes_schema = [HeroResponse.model_validate(h) for h in heroes_orm]
+    #     return total, heroes_schema
+    
+    # 使用fastapi-filter实现，仅修改参数
     async def get_heroes(
         self,
         *,
-        search: str | None = None,
-        order_by: list[str] | None = None,
+        hero_filter: HeroFilter,  # 使用fastapi-filter，过滤、排序参数合并
         limit: int = 10,
         offset: int = 0,
     ) -> tuple[int, list[HeroResponse]]:
         total, heroes_orm = await self.repository.get_all(
-            search=search,
-            order_by=order_by,            
+            hero_filter=hero_filter,
             limit=limit,
             offset=offset,
         )
-        heroes_schema = [HeroResponse.model_validate(h) for h in heroes_orm]
-        return total, heroes_schema
+        return total, [HeroResponse.model_validate(h) for h in heroes_orm]
     
 
     async def update_hero(self, data: HeroUpdate, hero_id: int) -> HeroResponse:
