@@ -76,73 +76,48 @@ class HeroRepository:
     
 
     
-    # 第二版：多字段排序
-    # async def get_all(
-    #     self,
-    #     *,
-    #     search: str | None = None,
-    #     order_by: list[str] | None = None,
-    #     limit: int = 10,
-    #     offset: int = 0,
-    # ) -> tuple[int, list[Hero]]:
-    #     query = select(Hero)
-
-    #     # 1. 搜索
-    #     if search:
-    #         query = query.where(
-    #             or_(
-    #                 Hero.name.ilike(f"%{search}%"),
-    #                 Hero.alias.ilike(f"%{search}%"),
-    #                 Hero.powers.ilike(f"%{search}%"),
-    #             )
-    #         )
-
-    #     # 2. 排序
-    #     ordering_clauses = []
-
-    #     if order_by:
-    #         for field in order_by:
-    #             is_desc = field.startswith("-")
-    #             field_name = field.lstrip("-")
-    #             if not hasattr(Hero, field_name):
-    #                 continue  # 跳过非法字段
-    #             column = getattr(Hero, field_name)
-    #             ordering_clauses.append(desc(column) if is_desc else asc(column))
-
-    #     # 自动追加默认次排序字段 (name ASC) 如果没指定 name
-    #     if not any(field.lstrip("-") == "name" for field in (order_by or [])):
-    #         ordering_clauses.append(asc(Hero.name))
-
-    #     # 固定追加 id ASC 以保证排序稳定
-    #     ordering_clauses.append(asc(Hero.id))
-
-    #     # 应用排序
-    #     query = query.order_by(*ordering_clauses)
-
-    #     # 3. 总数
-    #     count_query = select(func.count()).select_from(query.subquery())
-    #     total = (await self.session.scalar(count_query)) or 0
-
-    #     # 4. 分页
-    #     paginated_query = query.offset(offset).limit(limit)
-    #     items = list(await self.session.scalars(paginated_query))
-
-    #     return total, items
-    
-    
+    # 第二版：手动多字段排序
     async def get_all(
         self,
         *,
-        hero_filter: HeroFilter,
+        search: str | None = None,
+        order_by: list[str] | None = None,
         limit: int = 10,
         offset: int = 0,
     ) -> tuple[int, list[Hero]]:
-        # 1. 构造初始查询
         query = select(Hero)
 
-        # 2. 搜索 + 排序（链式）
-        query = hero_filter.filter(query)   # -> 调用 filter
-        query = hero_filter.sort(query)     # -> 调用 sort
+        # 1. 搜索
+        if search:
+            query = query.where(
+                or_(
+                    Hero.name.ilike(f"%{search}%"),
+                    Hero.alias.ilike(f"%{search}%"),
+                    Hero.powers.ilike(f"%{search}%"),
+                )
+            )
+
+        # 2. 排序
+        ordering_clauses = []
+
+        if order_by:
+            for field in order_by:
+                is_desc = field.startswith("-")
+                field_name = field.lstrip("-")
+                if not hasattr(Hero, field_name):
+                    continue  # 跳过非法字段
+                column = getattr(Hero, field_name)
+                ordering_clauses.append(desc(column) if is_desc else asc(column))
+
+        # 自动追加默认次排序字段 (name ASC) 如果没指定 name
+        if not any(field.lstrip("-") == "name" for field in (order_by or [])):
+            ordering_clauses.append(asc(Hero.name))
+
+        # 固定追加 id ASC 以保证排序稳定
+        ordering_clauses.append(asc(Hero.id))
+
+        # 应用排序
+        query = query.order_by(*ordering_clauses)
 
         # 3. 总数
         count_query = select(func.count()).select_from(query.subquery())
@@ -153,6 +128,43 @@ class HeroRepository:
         items = list(await self.session.scalars(paginated_query))
 
         return total, items
+    
+    
+    '''
+        我现在是明白为什么 FastAPI 里的排序过滤库和分页库用的人少了
+        分页库 1.4k star 说明用的人还多点，省去了自己封装的步骤
+        过滤库才 279 star 说明用的人很少，而且影响了自动文档的生成
+        我之前的全手动实现又灵活又方便，果然还是得手动搞
+        作为教程代码，这些都留在这把，文章都已经写了，这里建议看到的大家还是用手动实现吧。
+        最多懒得搞分页模型封装，那就用下 fastapi-pagination 这个库
+        像我这个已经做了模型的，直接用自己的就好。
+        查了些资料，确实日常有分页库就足够了，写好 Response 模型，用分页库包一下就完事。    
+    '''
+    
+    # 第三版：使用了 fastapi-filter 库的仓库层函数
+    # async def get_all(
+    #     self,
+    #     *,
+    #     hero_filter: HeroFilter,
+    #     limit: int = 10,
+    #     offset: int = 0,
+    # ) -> tuple[int, list[Hero]]:
+    #     # 1. 构造初始查询
+    #     query = select(Hero)
+
+    #     # 2. 搜索 + 排序（链式）
+    #     query = hero_filter.filter(query)   # -> 调用 filter
+    #     query = hero_filter.sort(query)     # -> 调用 sort
+
+    #     # 3. 总数
+    #     count_query = select(func.count()).select_from(query.subquery())
+    #     total = (await self.session.scalar(count_query)) or 0
+
+    #     # 4. 分页
+    #     paginated_query = query.offset(offset).limit(limit)
+    #     items = list(await self.session.scalars(paginated_query))
+
+    #     return total, items
     
     
 

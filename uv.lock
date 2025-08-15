@@ -177,6 +177,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "fastapi", extra = ["standard"] },
     { name = "fastapi-filter" },
+    { name = "fastapi-pagination" },
     { name = "httptools" },
     { name = "loguru" },
     { name = "pydantic-settings" },
@@ -189,6 +190,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.116.1" },
     { name = "fastapi-filter", specifier = ">=2.0.1" },
+    { name = "fastapi-pagination", specifier = ">=0.13.3" },
     { name = "httptools", specifier = ">=0.6.4" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
@@ -206,6 +208,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/43/ed/c36cfcd849519fd2d23051ad81a91fc5e8cfa7109496fc8a10ad565a5fe9/fastapi_filter-2.0.1.tar.gz", hash = "sha256:cffda370097af7e404f1eb188aca58b199084bfaf7cec881e40b404adf12566e", size = 9857, upload-time = "2024-12-07T17:30:06.343Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5e/88/afc022ad64d12f730141fc50758ecf9d60de5fed11335dc16e3127617f05/fastapi_filter-2.0.1-py3-none-any.whl", hash = "sha256:711d48707ec62f7c9e12a7713fc0f6a99858a9e3741b4d108102d5599e77197d", size = 11586, upload-time = "2024-12-07T17:30:05.375Z" },
+]
+
+[[package]]
+name = "fastapi-pagination"
+version = "0.13.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/10/4c/e98a1665b6ac2e9e4ed98450e4e0ea48108f3bc52de517d9a70cc22761c2/fastapi_pagination-0.13.3.tar.gz", hash = "sha256:40c2383aff13a3a0e4a2742dfbf004572e88458cd8f338d85f90a27e07abab4a", size = 550898, upload-time = "2025-06-25T21:22:15.287Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/73/ef1ab892c2d189d8b6bd72325e9e710df6737c3b7976e12aa5749a56ea01/fastapi_pagination-0.13.3-py3-none-any.whl", hash = "sha256:e1b1cc7fa5c773c61087845ef8a73ed6b516071c057418698b9242461573f44e", size = 50986, upload-time = "2025-06-25T21:22:13.591Z" },
 ]
 
 [[package]]
