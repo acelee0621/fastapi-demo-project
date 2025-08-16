@@ -3,6 +3,7 @@ from fastapi import Depends, FastAPI, Response
 from contextlib import asynccontextmanager
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi_pagination import add_pagination
 
 # 从 config 模块导入 get_settings 函数和 get_project_version 函数
 from app.core.config import Settings, get_settings, get_project_version, settings
@@ -46,6 +47,9 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 # 路由引入
 app.include_router(heroes_route.router, prefix="/api/v1")
+
+# 添加分页支持
+add_pagination(app)
 
 
 @app.get("/health")

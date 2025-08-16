@@ -1,4 +1,6 @@
 # app/domains/heroes/heroes_services.py
+from fastapi_pagination import Page, Params, paginate
+
 from app.domains.heroes.heroes_repository import HeroRepository
 from app.schemas.heroes import HeroCreate, HeroUpdate, HeroResponse, HeroStoryResponse
 from app.schemas.heroes_filter import HeroFilter
@@ -17,7 +19,7 @@ class HeroService:
     async def get_hero(self, hero_id: int) -> HeroResponse:
         hero = await self.repository.get_by_id(hero_id)
         return HeroResponse.model_validate(hero)
-    
+
     # 单字段排序
     # async def get_heroes(
     #     self,
@@ -34,30 +36,28 @@ class HeroService:
     #         direction=direction,
     #         limit=limit,
     #         offset=offset,
-    #     )        
+    #     )
     #     heroes_schema = [HeroResponse.model_validate(h) for h in heroes_orm]
     #     return total, heroes_schema      # 👈 返回 tuple[int, list[HeroResponse]]
-    
-    
+
     # 多字段排序
-    async def get_heroes(
-        self,
-        *,
-        search: str | None = None,
-        order_by: list[str] | None = None,  # 多字段排序参数定义
-        limit: int = 10,
-        offset: int = 0,
-    ) -> tuple[int, list[HeroResponse]]:
-        total, heroes_orm = await self.repository.get_all(
-            search=search,
-            order_by=order_by,            
-            limit=limit,
-            offset=offset,
-        )
-        heroes_schema = [HeroResponse.model_validate(h) for h in heroes_orm]
-        return total, heroes_schema
-    
-    
+    # async def get_heroes(
+    #     self,
+    #     *,
+    #     search: str | None = None,
+    #     order_by: list[str] | None = None,  # 多字段排序参数定义
+    #     limit: int = 10,
+    #     offset: int = 0,
+    # ) -> tuple[int, list[HeroResponse]]:
+    #     total, heroes_orm = await self.repository.get_all(
+    #         search=search,
+    #         order_by=order_by,
+    #         limit=limit,
+    #         offset=offset,
+    #     )
+    #     heroes_schema = [HeroResponse.model_validate(h) for h in heroes_orm]
+    #     return total, heroes_schema
+
     # 使用fastapi-filter实现，仅修改参数
     # async def get_heroes(
     #     self,
@@ -72,7 +72,26 @@ class HeroService:
     #         offset=offset,
     #     )
     #     return total, [HeroResponse.model_validate(h) for h in heroes_orm]
-    
+
+    # 使用分页库 fastapi-pagination 实现
+    async def get_heroes(
+        self,
+        *,
+        search: str | None = None,
+        order_by: list[str] | None = None,  # 多字段排序参数定义
+        params: Params,  # 分页参数（limit/offset/page/size）
+    ) -> Page[HeroResponse]:
+        # 1. 从仓库获取原始 ORM 列表
+        heroes_list = await self.repository.get_all(
+            search=search,
+            order_by=order_by,
+        )
+
+        # 2. 映射成 DTO
+        heroes_dto = [HeroResponse.model_validate(h) for h in heroes_list]
+
+        # 3. 使用 fastapi-pagination 对内存列表分页
+        return paginate(heroes_dto, params)
 
     async def update_hero(self, data: HeroUpdate, hero_id: int) -> HeroResponse:
         hero = await self.repository.update(data, hero_id)

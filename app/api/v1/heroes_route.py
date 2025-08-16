@@ -3,6 +3,7 @@ from loguru import logger
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_filter import FilterDepends
+from fastapi_pagination import Page, Params
 
 from app.core.database import get_db
 from app.domains.heroes.heroes_repository import HeroRepository
@@ -16,10 +17,9 @@ from app.schemas.heroes import (
     Pagination,
     Sort,
     Filters,
-    OrderByRule, 
+    OrderByRule,
 )
 from app.schemas.heroes_filter import HeroFilter
-
 
 
 router = APIRouter(prefix="/heroes", tags=["Heroes"])
@@ -43,6 +43,7 @@ async def create_hero(
     except Exception as e:
         logger.error(f"Failed to create hero: {str(e)}")
         raise
+
 
 # 单字段排序路由层
 # @router.get("", response_model=HeroListResponse)
@@ -85,57 +86,56 @@ async def create_hero(
 
 
 # 手动多字段排序路由层
-@router.get("", response_model=HeroListResponse)
-async def list_heroes(
-    search: str | None = Query(
-        None,
-        description="按名称、别名、能力进行模糊搜索",
-        max_length=100,
-    ),    
-    order_by: list[str] | None = Query(
-        None,
-        description="排序字段，如 -name,alias,powers(-表示倒序，默认正序)",
-        example=["-name", "alias"],
-    ),
-    page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
-    service: HeroService = Depends(get_hero_service),
-) -> HeroListResponse:
-    try:
-        offset = (page - 1) * limit
-        # 1. 将原始的字符串列表 ['-name', 'alias'] 直接传给服务层
-        total, heroes = await service.get_heroes(
-            search=search,
-            order_by=order_by,
-            limit=limit,
-            offset=offset,
-        )
-        total_pages = (total + limit - 1) // limit
+# @router.get("", response_model=HeroListResponse)
+# async def list_heroes(
+#     search: str | None = Query(
+#         None,
+#         description="按名称、别名、能力进行模糊搜索",
+#         max_length=100,
+#     ),
+#     order_by: list[str] | None = Query(
+#         None,
+#         description="排序字段，如 -name,alias,powers(-表示倒序，默认正序)",
+#         example=["-name", "alias"],
+#     ),
+#     page: int = Query(1, ge=1, description="页码"),
+#     limit: int = Query(10, ge=1, le=100, description="每页数量"),
+#     service: HeroService = Depends(get_hero_service),
+# ) -> HeroListResponse:
+#     try:
+#         offset = (page - 1) * limit
+#         # 1. 将原始的字符串列表 ['-name', 'alias'] 直接传给服务层
+#         total, heroes = await service.get_heroes(
+#             search=search,
+#             order_by=order_by,
+#             limit=limit,
+#             offset=offset,
+#         )
+#         total_pages = (total + limit - 1) // limit
 
-        # 2. 将字符串列表转换为结构化的 OrderByRule 列表，用于最终返回
-        order_rules = [
-            OrderByRule(field=field.lstrip("-"), dir="desc" if field.startswith("-") else "asc")
-            for field in (order_by or [])
-        ]
-        # 3. 组装最终响应
-        return HeroListResponse(
-            data=heroes,
-            pagination=Pagination(
-                currentPage=page,
-                totalPages=total_pages,
-                totalItems=total,
-                limit=limit,
-                hasMore=page < total_pages,
-                previousPage=page - 1 if page > 1 else None,
-                nextPage=page + 1 if page < total_pages else None,
-            ),
-            sort=Sort(fields=order_rules),
-            filters=Filters(search=search),
-        )
-    except Exception as e:
-        logger.error(f"Failed to fetch heroes: {e}")
-        raise
-
+#         # 2. 将字符串列表转换为结构化的 OrderByRule 列表，用于最终返回
+#         order_rules = [
+#             OrderByRule(field=field.lstrip("-"), dir="desc" if field.startswith("-") else "asc")
+#             for field in (order_by or [])
+#         ]
+#         # 3. 组装最终响应
+#         return HeroListResponse(
+#             data=heroes,
+#             pagination=Pagination(
+#                 currentPage=page,
+#                 totalPages=total_pages,
+#                 totalItems=total,
+#                 limit=limit,
+#                 hasMore=page < total_pages,
+#                 previousPage=page - 1 if page > 1 else None,
+#                 nextPage=page + 1 if page < total_pages else None,
+#             ),
+#             sort=Sort(fields=order_rules),
+#             filters=Filters(search=search),
+#         )
+#     except Exception as e:
+#         logger.error(f"Failed to fetch heroes: {e}")
+#         raise
 
 
 # 使用了 fastapi-filter 库的路由
@@ -179,6 +179,31 @@ async def list_heroes(
 #         logger.error(f"Failed to fetch heroes: {e}")
 #         raise
 
+
+# 使用了 fastapi-pagination 分页库的路由层
+@router.get("", response_model=Page[HeroResponse])
+async def list_heroes(
+    search: str | None = Query(
+        None,
+        description="按名称、别名、能力进行模糊搜索",
+        max_length=100,
+    ),
+    order_by: list[str] | None = Query(
+        None,
+        description="排序字段，如 -name,alias (-表示倒序，默认正序)",
+        example=["-name", "alias"],
+    ),
+    params: Params = Depends(),  # fastapi-paginate 提供分页参数
+    service: HeroService = Depends(get_hero_service),
+) -> Page[HeroResponse]:
+    # 调用服务层获取分页结果
+    heroes_page = await service.get_heroes(
+        search=search,
+        order_by=order_by,
+        params=params,
+    )
+
+    return heroes_page
 
 
 @router.get("/{hero_id}", response_model=HeroResponse)

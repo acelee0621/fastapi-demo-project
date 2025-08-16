@@ -3,7 +3,6 @@ from sqlalchemy import select, func, or_, desc, asc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from app.core.exceptions import AlreadyExistsException, NotFoundException
 from app.models.heroes import Hero
 from app.schemas.heroes import HeroCreate, HeroUpdate
@@ -36,6 +35,8 @@ class HeroRepository:
         if not hero:
             raise NotFoundException(f"Hero with id {hero_id} not found")
         return hero
+    
+    
     # 第一版：单字段排序
     # async def get_all(
     #     self,
@@ -77,14 +78,110 @@ class HeroRepository:
 
     
     # 第二版：手动多字段排序
+    # async def get_all(
+    #     self,
+    #     *,
+    #     search: str | None = None,
+    #     order_by: list[str] | None = None,
+    #     limit: int = 10,
+    #     offset: int = 0,
+    # ) -> tuple[int, list[Hero]]:
+    #     query = select(Hero)
+
+    #     # 1. 搜索
+    #     if search:
+    #         query = query.where(
+    #             or_(
+    #                 Hero.name.ilike(f"%{search}%"),
+    #                 Hero.alias.ilike(f"%{search}%"),
+    #                 Hero.powers.ilike(f"%{search}%"),
+    #             )
+    #         )
+
+    #     # 2. 排序
+    #     ordering_clauses = []
+
+    #     if order_by:
+    #         for field in order_by:
+    #             is_desc = field.startswith("-")
+    #             field_name = field.lstrip("-")
+    #             if not hasattr(Hero, field_name):
+    #                 continue  # 跳过非法字段
+    #             column = getattr(Hero, field_name)
+    #             ordering_clauses.append(desc(column) if is_desc else asc(column))
+
+    #     # 自动追加默认次排序字段 (name ASC) 如果没指定 name
+    #     if not any(field.lstrip("-") == "name" for field in (order_by or [])):
+    #         ordering_clauses.append(asc(Hero.name))
+
+    #     # 固定追加 id ASC 以保证排序稳定
+    #     ordering_clauses.append(asc(Hero.id))
+
+    #     # 应用排序
+    #     query = query.order_by(*ordering_clauses)
+
+    #     # 3. 总数
+    #     count_query = select(func.count()).select_from(query.subquery())
+    #     total = (await self.session.scalar(count_query)) or 0
+
+    #     # 4. 分页
+    #     paginated_query = query.offset(offset).limit(limit)
+    #     items = list(await self.session.scalars(paginated_query))
+
+    #     return total, items
+    
+    
+    '''
+        我现在是明白为什么 FastAPI 里的排序过滤库和分页库用的人少了
+        分页库 1.4k star 说明用的人还多点，省去了自己封装的步骤
+        过滤库才 279 star 说明用的人很少，而且影响了自动文档的生成
+        另外这个库使用的方式已经太老了，很久也不维护，跟不上新的 SQLAlchemy 2.0 的实现了
+        我之前的全手动实现又灵活又方便，果然还是得手动搞
+        作为教程代码，这些都留在这把，文章都已经写了，这里建议看到的大家还是用手动实现吧。
+        最多懒得搞分页模型封装，那就用下 fastapi-pagination 这个库
+        但是我感觉他这个库最后的返回结构也不如我之前的手动实现给的数据丰富
+        像我这个已经做了模型的，直接用自己的就好。
+        查了些资料，确实日常有分页库就足够了，写好 Response 模型，用分页库包一下就完事。    
+    '''
+    
+    # 第三版：使用了 fastapi-filter 库的仓库层函数
+    # async def get_all(
+    #     self,
+    #     *,
+    #     hero_filter: HeroFilter,
+    #     limit: int = 10,
+    #     offset: int = 0,
+    # ) -> tuple[int, list[Hero]]:
+    #     # 1. 构造初始查询
+    #     query = select(Hero)
+
+    #     # 2. 搜索 + 排序（链式）
+    #     query = hero_filter.filter(query)   # -> 调用 filter
+    #     query = hero_filter.sort(query)     # -> 调用 sort
+        
+    #     print(type(query))
+
+    #     # 3. 总数
+    #     count_query = select(func.count()).select_from(query.subquery())
+    #     total = (await self.session.scalar(count_query)) or 0
+
+    #     # 4. 分页
+    #     paginated_query = query.offset(offset).limit(limit)
+    #     items = list(await self.session.scalars(paginated_query))
+
+    #     return total, items
+
+    
+    # 第四版：使用了 fastapi-pagination 库的仓库层函数
     async def get_all(
         self,
         *,
         search: str | None = None,
         order_by: list[str] | None = None,
-        limit: int = 10,
-        offset: int = 0,
-    ) -> tuple[int, list[Hero]]:
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[Hero]:
+        
         query = select(Hero)
 
         # 1. 搜索
@@ -110,8 +207,10 @@ class HeroRepository:
                 ordering_clauses.append(desc(column) if is_desc else asc(column))
 
         # 自动追加默认次排序字段 (name ASC) 如果没指定 name
-        if not any(field.lstrip("-") == "name" for field in (order_by or [])):
-            ordering_clauses.append(asc(Hero.name))
+        # 这个自动追加 name 字段为次选字段是基于我们这个 Hero 模型的业务考虑
+        # 以 name 稳定排序更美观，但是作为通用排序逻辑的话是不需的，只要有 id 兜底就行
+        # if not any(field.lstrip("-") == "name" for field in (order_by or [])):
+        #     ordering_clauses.append(asc(Hero.name))
 
         # 固定追加 id ASC 以保证排序稳定
         ordering_clauses.append(asc(Hero.id))
@@ -119,52 +218,16 @@ class HeroRepository:
         # 应用排序
         query = query.order_by(*ordering_clauses)
 
-        # 3. 总数
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await self.session.scalar(count_query)) or 0
+        # 3. 分页
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
 
-        # 4. 分页
-        paginated_query = query.offset(offset).limit(limit)
-        items = list(await self.session.scalars(paginated_query))
+        # 4. 执行查询        
+        result = await self.session.scalars(query)       
 
-        return total, items
-    
-    
-    '''
-        我现在是明白为什么 FastAPI 里的排序过滤库和分页库用的人少了
-        分页库 1.4k star 说明用的人还多点，省去了自己封装的步骤
-        过滤库才 279 star 说明用的人很少，而且影响了自动文档的生成
-        我之前的全手动实现又灵活又方便，果然还是得手动搞
-        作为教程代码，这些都留在这把，文章都已经写了，这里建议看到的大家还是用手动实现吧。
-        最多懒得搞分页模型封装，那就用下 fastapi-pagination 这个库
-        像我这个已经做了模型的，直接用自己的就好。
-        查了些资料，确实日常有分页库就足够了，写好 Response 模型，用分页库包一下就完事。    
-    '''
-    
-    # 第三版：使用了 fastapi-filter 库的仓库层函数
-    # async def get_all(
-    #     self,
-    #     *,
-    #     hero_filter: HeroFilter,
-    #     limit: int = 10,
-    #     offset: int = 0,
-    # ) -> tuple[int, list[Hero]]:
-    #     # 1. 构造初始查询
-    #     query = select(Hero)
-
-    #     # 2. 搜索 + 排序（链式）
-    #     query = hero_filter.filter(query)   # -> 调用 filter
-    #     query = hero_filter.sort(query)     # -> 调用 sort
-
-    #     # 3. 总数
-    #     count_query = select(func.count()).select_from(query.subquery())
-    #     total = (await self.session.scalar(count_query)) or 0
-
-    #     # 4. 分页
-    #     paginated_query = query.offset(offset).limit(limit)
-    #     items = list(await self.session.scalars(paginated_query))
-
-    #     return total, items
+        return list(result)
     
     
 
