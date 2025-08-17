@@ -63,6 +63,11 @@ class Settings(BaseSettings):
 
     DEBUG: bool = False
     APP_NAME: str = "FastAPI Demo Project"
+    
+    # 安全配置
+    JWT_SECRET: str
+    JWT_ALGORITHM: str
+    JWT_EXPIRATION: int = 30
 
     # --- 嵌套配置 ---
     # 将 DatabaseSettings 作为主 Settings 的一个字段。

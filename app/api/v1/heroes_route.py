@@ -20,9 +20,10 @@ from app.schemas.heroes import (
     OrderByRule,
 )
 from app.schemas.heroes_filter import HeroFilter
+from app.domains.users.auth_dependencies import get_current_user
 
 
-router = APIRouter(prefix="/heroes", tags=["Heroes"])
+router = APIRouter(prefix="/heroes", tags=["Heroes"], dependencies=[Depends(get_current_user)])
 
 
 def get_hero_service(session: AsyncSession = Depends(get_db)) -> HeroService:

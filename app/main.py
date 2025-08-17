@@ -16,7 +16,7 @@ from app.core.database import (
 )
 
 from app.core.exceptions import global_exception_handler
-from app.api.v1 import heroes_route
+from app.api.v1 import heroes_route, auth_route
 
 
 # Lifespan: 在应用启动时调用 get_settings，触发配置加载和缓存
@@ -46,6 +46,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 
 # 路由引入
+app.include_router(auth_route.router, prefix="/api/v1")
 app.include_router(heroes_route.router, prefix="/api/v1")
 
 # 添加分页支持
