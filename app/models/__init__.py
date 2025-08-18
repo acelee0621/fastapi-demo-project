@@ -4,9 +4,10 @@
 from .base import Base
 from .users import User
 from .heroes import Hero
+from .collections import Collection
 
 # 可选：声明公开接口（清晰化模块导出）
-__all__ = ["Base", "User", "Hero"]
+__all__ = ["Base", "User", "Hero", "Collection"]
 
 
 # 写法 2：动态导入

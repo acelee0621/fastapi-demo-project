@@ -1,3 +1,4 @@
+# app/main.py
 from loguru import logger
 from fastapi import Depends, FastAPI, Response
 from contextlib import asynccontextmanager
@@ -14,23 +15,24 @@ from app.core.database import (
     close_database_connection,
     get_db,
 )
-
 from app.core.exceptions import global_exception_handler
-from app.api.v1 import heroes_route, auth_route
+from app.api.v1 import heroes_route, auth_route, collections_route
+from app.lifespan import lifespan
 
 
 # Lifespan: 在应用启动时调用 get_settings，触发配置加载和缓存
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # 应用启动时执行
-    get_settings()
-    await setup_database_connection()
+# 当 Lifspan 开始变得臃肿，可以考虑拆分成多个文件
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # 应用启动时执行
+#     get_settings()
+#     await setup_database_connection()
 
-    logger.info("🚀 应用启动，数据库已连接。")
-    yield
-    # 应用关闭时执行
-    await close_database_connection()
-    logger.info("应用关闭，数据库连接已释放。")
+#     logger.info("🚀 应用启动，数据库已连接。")
+#     yield
+#     # 应用关闭时执行
+#     await close_database_connection()
+#     logger.info("应用关闭，数据库连接已释放。")
 
 
 app = FastAPI(
@@ -48,6 +50,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 # 路由引入
 app.include_router(auth_route.router, prefix="/api/v1")
 app.include_router(heroes_route.router, prefix="/api/v1")
+app.include_router(collections_route.router, prefix="/api/v1")
 
 # 添加分页支持
 add_pagination(app)

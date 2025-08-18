@@ -21,15 +21,17 @@ from app.schemas.heroes import (
 )
 from app.schemas.heroes_filter import HeroFilter
 from app.domains.users.auth_dependencies import get_current_user
+from redis.asyncio import Redis
+from app.core.redis_db import get_cache_redis
 
 
 router = APIRouter(prefix="/heroes", tags=["Heroes"], dependencies=[Depends(get_current_user)])
 
 
-def get_hero_service(session: AsyncSession = Depends(get_db)) -> HeroService:
+def get_hero_service(session: AsyncSession = Depends(get_db),redis: Redis = Depends(get_cache_redis)) -> HeroService:
     """Dependency for getting HeroService instance."""
     repository = HeroRepository(session)
-    return HeroService(repository)
+    return HeroService(repository, redis)
 
 
 @router.post("", response_model=HeroResponse, status_code=status.HTTP_201_CREATED)

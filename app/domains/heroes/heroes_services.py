@@ -5,20 +5,46 @@ from app.domains.heroes.heroes_repository import HeroRepository
 from app.schemas.heroes import HeroCreate, HeroUpdate, HeroResponse, HeroStoryResponse
 from app.schemas.heroes_filter import HeroFilter
 
+import asyncio
+from redis.asyncio import Redis
+
+
+
+CACHE_TTL = 60 * 15   # 15 分钟缓存
+
 
 class HeroService:
-    def __init__(self, repository: HeroRepository):
+    def __init__(self, repository: HeroRepository, redis: Redis):
         """Service layer for hero operations."""
 
         self.repository = repository
+        self.redis = redis
 
     async def create_hero(self, data: HeroCreate) -> HeroResponse:
         new_hero = await self.repository.create(data)
         return HeroResponse.model_validate(new_hero)
 
+    # async def get_hero(self, hero_id: int) -> HeroResponse:
+    #     hero = await self.repository.get_by_id(hero_id)
+    #     return HeroResponse.model_validate(hero)
+    
+    
     async def get_hero(self, hero_id: int) -> HeroResponse:
+        key = f"hero:{hero_id}"
+        cached = await self.redis.get(key)
+        if cached:
+            # 命中缓存，直接返回
+            return HeroResponse.model_validate_json(cached)
+
+        # 模拟慢查询：睡 5 秒
+        await asyncio.sleep(5)
+
         hero = await self.repository.get_by_id(hero_id)
-        return HeroResponse.model_validate(hero)
+        dto = HeroResponse.model_validate(hero)
+
+        # 写回缓存
+        await self.redis.set(key, dto.model_dump_json(), ex=CACHE_TTL)
+        return dto
 
     # 单字段排序
     # async def get_heroes(

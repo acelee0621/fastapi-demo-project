@@ -25,3 +25,4 @@ def get_service(service_cls: Type[T], repo_cls: Type[R]) -> Callable[..., T]:
         return service_cls(repo_cls(session))
 
     return _factory
+

@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str
     JWT_EXPIRATION: int = 30
+    
+    # Redis 配置
+    REDIS_HOST: str = "localhost:6379"
 
     # --- 嵌套配置 ---
     # 将 DatabaseSettings 作为主 Settings 的一个字段。
