@@ -69,18 +69,46 @@ async def close_database_connection():
 
 
 # --- 3. 依赖注入函数 ---
+# async def get_db() -> AsyncGenerator[AsyncSession, None]:
+#     """
+#     为每个请求或任务提供数据库会话。
+#     它现在依赖由 setup_database_connection 管理的全局 SessionFactory。
+#     """
+#     if _SessionFactory is None:
+#         # 这个错误通常不应该在正确配置的生产环境中出现
+#         # 它表明 setup_database_connection 未在应用启动时调用
+#         raise Exception("数据库未初始化。请检查 FastAPI 的 lifespan 启动配置。")
+
+#     async with _SessionFactory() as session:
+#         yield session
+        
+
+# 新的工作单元模式的依赖注入函数        
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    为每个请求或任务提供数据库会话。
-    它现在依赖由 setup_database_connection 管理的全局 SessionFactory。
+    依赖注入函数：为每个请求提供一个数据库会话，
+    并将其包裹在一个能自动提交/回滚的事务中（工作单元模式）。
     """
     if _SessionFactory is None:
-        # 这个错误通常不应该在正确配置的生产环境中出现
-        # 它表明 setup_database_connection 未在应用启动时调用
         raise Exception("数据库未初始化。请检查 FastAPI 的 lifespan 启动配置。")
 
     async with _SessionFactory() as session:
-        yield session
+        # 👇 这是关键的升级：添加 session.begin() 上下文管理器
+        async with session.begin():
+            try:
+                # 在这个事务块中，将 session 提供给应用的其余部分
+                yield session
+                # -----------------------------------------------------------------
+                # 当路由函数成功执行完毕，离开这个 with 块时，
+                # session.begin() 上下文管理器会自动为你调用 session.commit()。
+                # -----------------------------------------------------------------
+            except Exception:
+                # -----------------------------------------------------------------
+                # 如果在路由函数或其调用的任何代码中发生了异常，
+                # session.begin() 会捕获它，自动调用 session.rollback()，
+                # 然后再将异常重新抛出，以便 FastAPI 的全局处理器能够捕获。
+                # -----------------------------------------------------------------
+                raise
 
 
 # --- 4. 数据库表创建工具 ---

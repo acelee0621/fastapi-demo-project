@@ -36,7 +36,7 @@ class CollectionRepository(
 
         try:
             # 步骤 4: 调用父类的 create 方法，传入这个最终构造好的 Pydantic Schema 对象
-            return await super().create(session=self.session, obj_in=final_obj_in)
+            return await super().create(obj_in=final_obj_in)
         except IntegrityError:
             await self.session.rollback()
             # 异常信息可以从原始的 obj_in 中获取，对用户更友好

@@ -31,20 +31,19 @@ class RepositoryBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             raise NotFoundException(f"{self.model.__name__} with id {id} not found")        
         return db_obj
 
-    async def create(self, session: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
+    async def create(self, *, obj_in: CreateSchemaType) -> ModelType:
         """
         从 Pydantic Schema 创建一个新对象，并处理唯一性约束异常。
         """
         # 👇 逻辑内聚：将 .model_dump() 封装在基类内部
         obj_in_data = obj_in.model_dump()
         db_obj = self.model(**obj_in_data)
-        try:
-            session.add(db_obj)
-            await session.commit()
-            await session.refresh(db_obj)
+        self.session.add(db_obj)
+        try:            
+            await self.session.flush()
+            await self.session.refresh(db_obj)
             return db_obj
-        except IntegrityError:
-            await session.rollback()
+        except IntegrityError:            
             raise AlreadyExistsException(
                 f"{self.model.__name__} with conflicting data already exists."
             )
@@ -65,16 +64,17 @@ class RepositoryBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             setattr(db_obj, field, value)
             
         self.session.add(db_obj)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(db_obj)
         return db_obj
 
-    async def delete(self, *, id: Any) -> None:
+    async def delete(self, *, id: Any) -> ModelType:
         """删除一个对象"""
         # 👇 优化：get 方法已经处理了 Not Found，所以这里的检查是多余的
         obj = await self.get(id=id)
         await self.session.delete(obj)
-        await self.session.commit()
+        await self.session.flush()
+        return obj
 
     async def get_list(
         self,

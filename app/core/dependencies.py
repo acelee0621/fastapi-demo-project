@@ -5,8 +5,6 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.redis_db import get_cache_redis
-
-# 引入需要的类
 from app.domains.heroes.heroes_repo import HeroRepository
 from app.domains.heroes.heroes_serv import HeroService
 from app.domains.collections.collections_repository import CollectionRepository
@@ -48,6 +46,8 @@ def get_hero_service(
     """Dependency for getting HeroService instance."""
     repository = HeroRepository(session)
     return HeroService(repository, redis)
+
+
 
 # 通用依赖项，适用于通过工厂函数来构造
 get_collection_service: Callable[..., CollectionService] = get_service(

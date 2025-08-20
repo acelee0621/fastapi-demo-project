@@ -32,11 +32,13 @@ class HeroRepository(RepositoryBase[Hero, HeroCreate, HeroUpdate]):
         """
         try:
             # 直接调用父类的 create 方法，它包含了核心的创建逻辑
-            return await super().create(session=self.session, obj_in=obj_in)
+            return await super().create(obj_in=obj_in)
         except IntegrityError:
-            await self.session.rollback()
-            # 抛出包含具体字段的、对用户更友好的异常
+            # 这里不再需要手动回滚。
+            # 外层的 `async with session.begin():` 会在捕获到异常时自动处理回滚。
+            # 我们在这里的唯一职责，就是将数据库异常“翻译”成我们的业务异常。            
             raise AlreadyExistsException(f"Hero with alias '{obj_in.alias}' already exists")
+            # 如果不打算抛出这个精确的异常，可以使用父类的通用异常，你甚至都不需要重写这个方法。
 
     async def get_list(
         self,
@@ -52,11 +54,11 @@ class HeroRepository(RepositoryBase[Hero, HeroCreate, HeroUpdate]):
         此方法调用父类的通用列表查询，并返回一个包含 (总数, Hero ORM 对象列表) 的元组。
         """
         # 调用父类的 get_list 方法，并传入本模型允许被搜索的字段列表
-        return await super().get_list(
-            # 👇 session 现在是实例的一部分 (self.session)，无需在方法调用时传入
+        return await super().get_list(            
             limit=limit,
             offset=offset,
             search=search,
+            # 👇 这就是注入 Hero 模型的搜索策略，每个模型搜索策略不同，这个方法必须重写以便定制
             search_fields=["name", "alias", "powers"], # 策略定义
             order_by=order_by,
         )
