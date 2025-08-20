@@ -17,9 +17,6 @@ class HeroRepository(RepositoryBase[Hero, HeroCreate, HeroUpdate]):
     def __init__(self, session: AsyncSession):
         """
         初始化 HeroRepository。
-
-        Args:
-            session: SQLAlchemy 的异步会话实例。
         """
         super().__init__(model=Hero, session=session)
         self.session = session

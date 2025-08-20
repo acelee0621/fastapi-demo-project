@@ -28,41 +28,41 @@ class RepositoryBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         db_obj = await self.session.get(self.model, id)
         if not db_obj:
-            raise NotFoundException(f"{self.model.__name__} with id {id} not found")        
+            raise NotFoundException(f"{self.model.__name__} with id {id} not found")
         return db_obj
 
-    async def create(self, *, obj_in: CreateSchemaType) -> ModelType:
+    async def create(self, *, obj_in: CreateSchemaType, **extra_data: Any) -> ModelType:
         """
         从 Pydantic Schema 创建一个新对象，并处理唯一性约束异常。
         """
         # 👇 逻辑内聚：将 .model_dump() 封装在基类内部
         obj_in_data = obj_in.model_dump()
-        db_obj = self.model(**obj_in_data)
+        #    **extra_data 会覆盖 obj_in_data 中的同名字段，确保服务器逻辑优先
+        final_data = {**obj_in_data, **extra_data}
+        db_obj = self.model(**final_data)
         self.session.add(db_obj)
-        try:            
+        try:
             await self.session.flush()
             await self.session.refresh(db_obj)
             return db_obj
-        except IntegrityError:            
+        except IntegrityError:
             raise AlreadyExistsException(
                 f"{self.model.__name__} with conflicting data already exists."
             )
 
-    async def update(
-        self, *, db_obj: ModelType, obj_in: UpdateSchemaType
-    ) -> ModelType:
+    async def update(self, *, db_obj: ModelType, obj_in: UpdateSchemaType) -> ModelType:
         """
         从 Pydantic Schema 更新一个已存在的对象。
         """
         # 👇 逻辑内聚：将 .model_dump(exclude_unset=True) 封装在基类内部
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
         if not update_data:
             return db_obj  # 没有字段需要更新，直接返回原对象
-        
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
-            
+
         self.session.add(db_obj)
         await self.session.flush()
         await self.session.refresh(db_obj)
@@ -90,7 +90,7 @@ class RepositoryBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         获取记录列表，返回 (总数, 项目列表) 的元组。
         支持可选的分页、搜索、排序和任意数量的精确过滤。
         """
-        
+
         query = select(self.model)
 
         # 1. 应用任意数量的精确过滤条件 (例如: user_id=1, is_active=True)
@@ -101,23 +101,36 @@ class RepositoryBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if search and search_fields:
             search_clauses = [
                 getattr(self.model, field).ilike(f"%{search}%")
-                for field in search_fields if hasattr(self.model, field)
+                for field in search_fields
+                if hasattr(self.model, field)
             ]
             if search_clauses:
                 query = query.where(or_(*search_clauses))
 
         # 3. 应用排序
+        ordering_clauses = []
+
+        # 首先处理用户指定的排序
         if order_by:
-            ordering_clauses = []
             for field in order_by:
                 is_desc = field.startswith("-")
                 field_name = field.lstrip("-")
                 if hasattr(self.model, field_name):
+                    # 依然使用 getattr 保证类型安全
                     column = getattr(self.model, field_name)
                     ordering_clauses.append(desc(column) if is_desc else asc(column))
-            if ordering_clauses:
-                query = query.order_by(*ordering_clauses)
         
+        # 兜底稳定排序：检查用户的原始输入，如果未指定按 id 排序，则追加
+        if hasattr(self.model, "id") and not any(
+            field.lstrip("-") == "id" for field in (order_by or [])
+        ):
+            id_column = getattr(self.model, "id")
+            ordering_clauses.append(asc(id_column))
+
+        # 最后，如果列表不为空，则只调用一次 .order_by()
+        if ordering_clauses:
+            query = query.order_by(*ordering_clauses)
+
         # 4. 获取总数 (必须在分页之前)
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.scalar(count_query)) or 0
@@ -127,9 +140,9 @@ class RepositoryBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             query = query.offset(offset)
         if limit is not None:
             query = query.limit(limit)
-        
+
         # 6. 执行查询
         result = await self.session.scalars(query)
         items = list(result.all())
-        
+
         return total, items
