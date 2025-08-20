@@ -15,8 +15,9 @@ from app.core.database import (
     close_database_connection,
     get_db,
 )
-from app.core.exceptions import global_exception_handler
-from app.api.v1 import heroes_route, auth_route, collections_route
+# from app.core.exceptions import global_exception_handler
+from app.core.exceptions import register_exception_handlers
+from app.api.v1 import heroes_route, auth_route, collections_route,new_hero_route
 from app.lifespan import lifespan
 
 
@@ -44,13 +45,17 @@ app = FastAPI(
 )
 
 # 全局异常处理,所有未被自定义异常处理的异常都会触发
-app.add_exception_handler(Exception, global_exception_handler)
+# app.add_exception_handler(Exception, global_exception_handler)
+# 更新为通过注册函数调用全局异常处理
+register_exception_handlers(app)
 
 
 # 路由引入
 app.include_router(auth_route.router, prefix="/api/v1")
 app.include_router(heroes_route.router, prefix="/api/v1")
 app.include_router(collections_route.router, prefix="/api/v1")
+# 改造后的 Heroes 路由
+app.include_router(new_hero_route.router, prefix="/api/v1")
 
 # 添加分页支持
 add_pagination(app)
