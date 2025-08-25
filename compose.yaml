@@ -1,0 +1,73 @@
+# compose.yaml
+
+
+# 定义我们整个应用栈的名称
+name: 'fastapi-demo-project'
+
+services:
+  # 1. PostgreSQL 数据库服务
+  postgresql:
+    image: bitnami/postgresql:latest
+    # ports:
+    #   - "5432:5432"
+    environment:
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=postgres
+      - POSTGRESQL_DATABASE=mirror
+    volumes:
+      - postgresql_data:/bitnami/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # 2. Redis 服务
+  redis:
+    image: bitnami/redis:latest
+    # ports:
+    #   - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - redis_data:/bitnami/redis/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 4. FastAPI 后端应用服务
+  app:
+    image: fastapi-demo-project:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: never    
+    ports:
+      - "8000:8000"
+    env_file:            # 把 .env.dev 挂进来,如果不挂env，就要把下面的环境变量写全了
+      - .env.dev
+    # environment:
+    #   - DEMO_ENVIRONMENT=dev
+    #   - DEMO_DB_HOST=postgresql
+    #   - DEMO_DB_PORT=5432
+    #   - DEMO_DB_USER=postgres
+    #   - DEMO_DB_PASSWORD=postgres
+    #   - DEMO_DB_DB=tutorial
+    #   - DEMO_REDIS_HOST=redis:6379      
+    depends_on:      
+      postgresql:
+        condition: service_healthy      
+      redis:
+        condition: service_healthy 
+  
+  
+# 定义具名卷，用于持久化存储数据
+volumes:
+  postgresql_data:
+    driver: local  
+  redis_data:
+    driver: local
+  

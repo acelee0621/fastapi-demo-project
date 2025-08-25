@@ -1,0 +1,15 @@
+__pycache__/  # 忽略缓存
+.venv/  # 忽略虚拟环境
+tests/  # 忽略测试目录
+
+# 忽略 git 相关的内容
+.coverage
+.git
+.gitignore
+.python-version
+README.md
+LICENSE
+
+*.pyc
+*.pyo
+*.log
